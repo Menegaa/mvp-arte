@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n server,vite -c cyan,magenta \"node --watch server.js\" \"vite\"",
-    "build": "PLAYWRIGHT_BROWSERS_PATH=$PWD/.playwright-browsers npx playwright install chromium && vite build",
+    "build": "npx playwright install chromium && vite build",
     "start": "node server.js"
   },
   "dependencies": {
