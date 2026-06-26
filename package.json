@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n server,vite -c cyan,magenta \"node --watch server.js\" \"vite\"",
-    "build": "vite build",
+    "build": "npx playwright install chromium --with-deps && vite build",
     "start": "node server.js"
   },
   "dependencies": {
