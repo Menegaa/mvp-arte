@@ -1,0 +1,19 @@
+{
+  "name": "gerador-arte-salesjobs",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n server,vite -c cyan,magenta \"node --watch server.js\" \"vite\"",
+    "build": "vite build",
+    "start": "node server.js",
+    "postinstall": "playwright install chromium --with-deps"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "playwright": "^1.45.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^5.3.1"
+  }
+}

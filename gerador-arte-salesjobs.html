@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Arte SalesJobs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #f0f6f8;
+      color: #2d3748;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1c8fa3;
+      color: white;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(28,143,163,0.25);
+    }
+
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .logo-mark span {
+      display: block;
+      border-radius: 50%;
+    }
+
+    .logo-mark .dot-teal  { width: 14px; height: 14px; background: white; opacity: 0.9; }
+    .logo-mark .dot-green { width: 10px; height: 10px; background: #52c46a; margin-top: 4px; }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    header .subtitle {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    main {
+      max-width: 680px;
+      margin: 40px auto;
+      padding: 0 20px 60px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 32px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #1c8fa3;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 18px;
+      background: #52c46a;
+      border-radius: 2px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.82rem;
+      color: #4a5568;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    label .required { color: #e53e3e; margin-left: 2px; }
+
+    .field-hint {
+      display: block;
+      font-weight: 400;
+      font-size: 0.78rem;
+      color: #a0aec0;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-top: 2px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      color: #2d3748;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      outline: none;
+      background: #fafbfc;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      border-color: #1c8fa3;
+      box-shadow: 0 0 0 3px rgba(28,143,163,0.12);
+      background: white;
+    }
+
+    textarea {
+      min-height: 108px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .btn-primary {
+      background: #1c8fa3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.18s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #177a8c;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: none;
+      flex-shrink: 0;
+    }
+
+    .is-loading .spinner { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1.5px solid #fed7d7;
+      color: #c53030;
+      border-radius: 8px;
+      padding: 11px 15px;
+      margin-top: 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .error-msg.visible { display: flex; }
+
+    .error-icon {
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Results ── */
+    .results-section { margin-top: 28px; }
+
+    .results-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .results-header h2 {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge {
+      background: #52c46a;
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .result-cards { display: flex; flex-direction: column; gap: 10px; }
+
+    .result-card {
+      background: white;
+      border: 1.5px solid #e2e8f0;
+      border-left: 4px solid #52c46a;
+      border-radius: 10px;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .result-card:hover {
+      border-color: #52c46a;
+      box-shadow: 0 3px 10px rgba(82,196,106,0.15);
+    }
+
+    .result-card-info .cargo-name {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #2d3748;
+    }
+
+    .result-card-info .meta {
+      font-size: 0.78rem;
+      color: #a0aec0;
+      margin-top: 3px;
+      font-weight: 600;
+    }
+
+    .btn-download {
+      background: #52c46a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.18s, transform 0.1s;
+      flex-shrink: 0;
+    }
+
+    .btn-download:hover {
+      background: #3aad58;
+      transform: translateY(-1px);
+    }
+
+    .btn-download:active { transform: translateY(0); }
+
+    .btn-download svg { flex-shrink: 0; }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      header { padding: 16px 20px; }
+      main { margin: 24px auto; }
+      .card { padding: 24px 20px; }
+      .result-card { flex-direction: column; align-items: flex-start; }
+      .btn-download { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <span class="dot-teal"></span>
+    <span class="dot-green"></span>
+  </div>
+  <div>
+    <h1>Gerador de Arte SalesJobs</h1>
+    <div class="subtitle">Criação automática de posts de vaga</div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-title">Dados da Vaga</div>
+    <form id="vagaForm" novalidate>
+
+      <div class="form-group">
+        <label for="idVaga">ID da Vaga <span class="required">*</span></label>
+        <input type="text" id="idVaga" placeholder="Ex: 5217" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label for="variacoes">
+          Variações de nomenclatura <span class="required">*</span>
+        </label>
+        <span class="field-hint">Uma variação por linha. Cada linha gera um arquivo HTML separado.</span>
+        <textarea id="variacoes" placeholder="Executivo de Vendas&#10;Gerente de Contas&#10;Key Account Manager"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span class="spinner" id="spinner"></span>
+          <span id="btnText">Buscar Vaga</span>
+        </button>
+      </div>
+
+      <div class="error-msg" id="errorMsg">
+        <span class="error-icon">⚠</span>
+        <span id="errorText"></span>
+      </div>
+
+    </form>
+  </div>
+
+  <div class="results-section" id="resultsSection" style="display:none">
+    <div class="results-header">
+      <h2 id="resultsTitle">Artes Geradas</h2>
+      <span class="badge" id="resultsBadge"></span>
+    </div>
+    <div class="result-cards" id="resultCards"></div>
+  </div>
+</main>
+
+<script>
+  // ─────────────────────────────────────────────────────────────
+  // TODO: INSERIR TEMPLATE HTML AQUI
+  // Variáveis disponíveis para substituição:
+  //   {{EMPRESA}}         — nome da empresa
+  //   {{CARGO}}           — nome do cargo (variação)
+  //   {{LOCALIDADE}}      — cidade/estado da vaga
+  //   {{FOTO_URL}}        — URL da foto/imagem da vaga
+  //   {{REQUISITOS_HTML}} — blocos <span class="col-item">...</span>
+  //   {{BENEFICIOS_HTML}} — blocos <span class="col-item">...</span>
+  // ─────────────────────────────────────────────────────────────
+  const TEMPLATE_HTML = ``;
+
+  const WEBHOOK_URL = 'https://foursales-company.app.n8n.cloud/webhook/buscar-vaga-sistema-arte';
+
+  // Artes geradas na última busca (indexadas para download)
+  let generatedArts = [];
+
+  // ── Utilitários ──────────────────────────────────────────────
+
+  function toSlug(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Parsing da resposta do webhook ───────────────────────────
+
+  function extractVagaData(responseData) {
+    const data = Array.isArray(responseData) ? responseData[0] : responseData;
+
+    // Formato simplificado (caso o n8n já transforme a resposta)
+    if (data && typeof data.empresa === 'string') {
+      return {
+        empresa:    data.empresa    || '',
+        localidade: data.localidade || '',
+        foto_url:   data.foto_url   || '',
+        requisitos: Array.isArray(data.requisitos) ? data.requisitos : [],
+        beneficios: Array.isArray(data.beneficios) ? data.beneficios : []
+      };
+    }
+
+    // Formato raw da API SalesJobs
+    const empresa = (data.company?.name || '').trim();
+
+    const localidade = (data.locations || [])
+      .map(loc => {
+        const city  = loc.city?.name || '';
+        const state = loc.city?.state?.acronym || '';
+        return state ? `${city}/${state}` : city;
+      })
+      .filter(Boolean)
+      .join(', ');
+
+    const foto_url = data.foto_url || '';
+
+    const requisitos = [...(data.flightPlan?.disclosure?.mandatoryRequirements || [])]
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(r => r.text || '')
+      .filter(Boolean);
+
+    const beneficios = (data.benefits || []).map(b => {
+      let label = b.benefit?.name || '';
+      if (b.textValue)                      label += ` (${b.textValue})`;
+      if (b.currencyValue != null)          label += ` — R$ ${b.currencyValue}`;
+      return label;
+    }).filter(Boolean);
+
+    return { empresa, localidade, foto_url, requisitos, beneficios };
+  }
+
+  // ── Geração do HTML final ────────────────────────────────────
+
+  function buildItemsHTML(items) {
+    return items.map(item => `<span class="col-item">${item}</span>`).join('\n        ');
+  }
+
+  function generatePostHTML(vagaData, cargo) {
+    if (!TEMPLATE_HTML.trim()) {
+      // Placeholder enquanto o template não foi inserido
+      return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(cargo)}</title></head>` +
+        `<body><p style="font-family:sans-serif;padding:40px;color:#888">` +
+        `Template não inserido. Adicione o HTML em TEMPLATE_HTML no script.</p></body></html>`;
+    }
+
+    const requisitosHTML = buildItemsHTML(vagaData.requisitos);
+    const beneficiosHTML = buildItemsHTML(vagaData.beneficios);
+
+    return TEMPLATE_HTML
+      .replace(/\{\{EMPRESA\}\}/g,         vagaData.empresa)
+      .replace(/\{\{CARGO\}\}/g,           cargo)
+      .replace(/\{\{LOCALIDADE\}\}/g,      vagaData.localidade)
+      .replace(/\{\{FOTO_URL\}\}/g,        vagaData.foto_url)
+      .replace(/\{\{REQUISITOS_HTML\}\}/g, requisitosHTML)
+      .replace(/\{\{BENEFICIOS_HTML\}\}/g, beneficiosHTML);
+  }
+
+  // ── Download ─────────────────────────────────────────────────
+
+  function downloadArt(index) {
+    const art = generatedArts[index];
+    if (!art) return;
+    const blob = new Blob([art.html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = art.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────
+
+  function setLoading(on) {
+    const btn     = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const text    = document.getElementById('btnText');
+    btn.disabled  = on;
+    spinner.style.display = on ? 'block' : 'none';
+    text.textContent = on ? 'Buscando vaga...' : 'Buscar Vaga';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    document.getElementById('errorText').textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').classList.remove('visible');
+  }
+
+  // ── Renderização dos cards de resultado ──────────────────────
+
+  function renderResults(idVaga, variacoes, vagaData) {
+    generatedArts = variacoes.map((cargo, i) => ({
+      cargo,
+      html:     generatePostHTML(vagaData, cargo),
+      filename: `arte-${idVaga}-${toSlug(cargo)}.html`,
+      empresa:  vagaData.empresa,
+      localidade: vagaData.localidade
+    }));
+
+    const container = document.getElementById('resultCards');
+    container.innerHTML = '';
+
+    generatedArts.forEach((art, i) => {
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="result-card-info">
+          <div class="cargo-name">${esc(art.cargo)}</div>
+          <div class="meta">${esc(art.empresa)}${art.localidade ? ' &middot; ' + esc(art.localidade) : ''}</div>
+        </div>
+        <button class="btn-download" onclick="downloadArt(${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Baixar HTML
+        </button>
+      `;
+      container.appendChild(card);
+    });
+
+    const total = variacoes.length;
+    document.getElementById('resultsTitle').textContent =
+      total === 1 ? 'Arte Gerada' : 'Artes Geradas';
+    document.getElementById('resultsBadge').textContent = total;
+
+    const section = document.getElementById('resultsSection');
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Submit ───────────────────────────────────────────────────
+
+  document.getElementById('vagaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const idVaga = document.getElementById('idVaga').value.trim();
+    const variacoes = document.getElementById('variacoes').value
+      .split('\n')
+      .map(v => v.trim())
+      .filter(Boolean);
+
+    if (!idVaga) {
+      showError('Informe o ID da Vaga.');
+      document.getElementById('idVaga').focus();
+      return;
+    }
+
+    if (variacoes.length === 0) {
+      showError('Informe ao menos uma variação de nomenclatura.');
+      document.getElementById('variacoes').focus();
+      return;
+    }
+
+    setLoading(true);
+    document.getElementById('resultsSection').style.display = 'none';
+
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_vaga: idVaga, variacoes })
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(body || `Erro HTTP ${res.status}`);
+      }
+
+      let data;
+      try { data = await res.json(); }
+      catch { throw new Error('Resposta inválida do servidor.'); }
+
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        throw new Error('Vaga não encontrada. Verifique o ID e tente novamente.');
+      }
+
+      const vagaData = extractVagaData(data);
+      renderResults(idVaga, variacoes, vagaData);
+
+    } catch (err) {
+      if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
+        showError('Erro ao conectar com o sistema. Verifique sua conexão e tente novamente.');
+      } else {
+        showError(err.message || 'Erro inesperado. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  });
+</script>
+
+</body>
+</html>
