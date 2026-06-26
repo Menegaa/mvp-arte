@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently -n server,vite -c cyan,magenta \"node --watch server.js\" \"vite\"",
     "build": "vite build",
-    "start": "node server.js",
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
