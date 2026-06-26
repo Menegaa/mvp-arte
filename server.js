@@ -6,6 +6,13 @@ import { existsSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// Em produção (Render) o Chromium é instalado dentro do projeto, pois o
+// ~/.cache não persiste do build para o runtime. Aponta o Playwright para lá.
+const localBrowsers = join(__dirname, '.playwright-browsers')
+if (existsSync(localBrowsers)) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = localBrowsers
+}
+
 const app = express()
 app.use(express.json({ limit: '10mb' }))
 
