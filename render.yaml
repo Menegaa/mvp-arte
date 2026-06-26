@@ -2,8 +2,10 @@ services:
   - type: web
     name: gerador-arte-salesjobs
     runtime: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/src/.playwright-browsers npx playwright install chromium && npm run build
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/src/.playwright-browsers
