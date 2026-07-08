@@ -61,7 +61,7 @@ app.get('/debug-env', (req, res) => {
   res.json({
     hasToken: !!process.env.CLICKUP_API_TOKEN,
     tokenLength: process.env.CLICKUP_API_TOKEN ? process.env.CLICKUP_API_TOKEN.length : 0,
-    envKeys: Object.keys(process.env).filter(k => k.includes('CLICKUP') || k === 'PORT')
+    envKeys: Object.keys(process.env)
   })
 })
 
