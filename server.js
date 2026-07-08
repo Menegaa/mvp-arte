@@ -1,125 +1,67 @@
 import express from 'express'
-import { chromium } from 'playwright'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-import { existsSync } from 'fs'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// Em produção (Render) o Chromium é instalado dentro do projeto, pois o
-// ~/.cache não persiste do build para o runtime. Aponta o Playwright para lá.
-const localBrowsers = join(__dirname, '.playwright-browsers')
-if (existsSync(localBrowsers)) {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = localBrowsers
-}
+import { closeBrowser } from './src/arte.js'
+import { verifySignature } from './src/clickup.js'
+import { processTask, shouldProcess } from './src/pipeline.js'
 
 const app = express()
-app.use(express.json({ limit: '10mb' }))
 
-const PEXELS_KEY = 'lCBu8OSxzeukfVRX4uSorhj8ISEt7wR1IYY0cVFfJPIhIDqwAzagvwEx'
-
-// ── Browser singleton ────────────────────────────────────────
-let browser = null
-
-async function getBrowser() {
-  if (!browser?.isConnected()) {
-    browser = await chromium.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote',
-      ]
-    })
-  }
-  return browser
+for (const envVar of ['CLICKUP_API_TOKEN', 'CLICKUP_WEBHOOK_SECRET']) {
+  if (!process.env[envVar]) console.warn(`⚠️  ${envVar} não definido — configure antes de usar em produção`)
 }
 
-process.on('SIGINT', async () => {
-  if (browser) await browser.close()
-  process.exit(0)
-})
-
-// ── Proxy webhook (resolve CORS) ─────────────────────────────
-app.post('/api/buscar-vaga', async (req, res) => {
-  try {
-    const upstream = await fetch(
-      'https://foursales-company.app.n8n.cloud/webhook/buscar-vaga-sistema-arte',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
-      }
-    )
-
-    if (!upstream.ok) {
-      const text = await upstream.text()
-      return res.status(upstream.status).json({ error: text || `HTTP ${upstream.status}` })
+// ── Webhook do ClickUp (criação de card) ─────────────────────
+// express.raw: o HMAC da assinatura precisa dos bytes exatos do body
+app.post('/webhooks/clickup', express.raw({ type: 'application/json' }), (req, res) => {
+  if (process.env.CLICKUP_WEBHOOK_SECRET) {
+    if (!verifySignature(req.body, req.headers['x-signature'])) {
+      return res.status(401).json({ error: 'assinatura inválida' })
     }
-
-    const data = await upstream.json()
-    res.json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+  } else {
+    console.warn('[webhook] CLICKUP_WEBHOOK_SECRET não definido — pulando verificação de assinatura')
   }
-})
 
-// ── Pexels — busca foto por cargo ───────────────────────────
-app.get('/api/foto', async (req, res) => {
-  const query = req.query.query || 'professional business'
+  let payload
   try {
-    const params = new URLSearchParams({ query, per_page: 1, orientation: 'portrait' })
-    const upstream = await fetch(
-      `https://api.pexels.com/v1/search?${params}`,
-      { headers: { Authorization: PEXELS_KEY } }
-    )
-    const data = await upstream.json()
-    const photo = data.photos?.[0]
-    res.json({ url: photo?.src?.portrait ?? '' })
-  } catch (err) {
-    console.error('[pexels]', err.message)
-    res.json({ url: '' })
+    payload = JSON.parse(req.body)
+  } catch {
+    return res.status(400).json({ error: 'body inválido' })
   }
+
+  if (payload.event !== 'taskCreated') {
+    return res.json({ status: 'ignored', event: payload.event })
+  }
+
+  const taskId = payload.task_id
+  if (!taskId) return res.status(400).json({ error: 'task_id ausente' })
+
+  if (!shouldProcess(taskId)) {
+    return res.json({ status: 'duplicate' })
+  }
+
+  // responde já — ClickUp desabilita webhooks lentos/com falha
+  res.json({ status: 'accepted' })
+  processTask(taskId).catch(err => console.error('[webhook]', err))
 })
 
-// ── Screenshot via Playwright ────────────────────────────────
-app.post('/api/screenshot', async (req, res) => {
-  const { html } = req.body
-  if (!html) return res.status(400).json({ error: 'html é obrigatório' })
+// ── Trigger manual (testes) ──────────────────────────────────
+app.post('/generate', express.json(), (req, res) => {
+  const { task_id } = req.body ?? {}
+  if (!task_id) return res.status(400).json({ error: 'task_id é obrigatório' })
 
-  let page = null
-  try {
-    const b = await getBrowser()
-    page = await b.newPage()
-    await page.setViewportSize({ width: 540, height: 675 })
-    await page.setContent(html, { waitUntil: 'load' })
-    // aguarda fontes renderizarem
-    await page.evaluate(() => document.fonts.ready)
-
-    const screenshot = await page.screenshot({
-      type: 'png',
-      clip: { x: 0, y: 0, width: 540, height: 675 }
-    })
-
-    res.type('image/png').send(screenshot)
-  } catch (err) {
-    console.error('[screenshot]', err.message)
-    res.status(500).json({ error: err.message })
-  } finally {
-    if (page) await page.close()
-  }
+  res.json({ status: 'accepted' })
+  processTask(task_id).catch(err => console.error('[generate]', err))
 })
 
-// ── Serve frontend buildado (produção) ──────────────────────
-const distPath = join(__dirname, 'dist')
-if (existsSync(distPath)) {
-  app.use(express.static(distPath))
-  app.get('*', (req, res) => res.sendFile(join(distPath, 'index.html')))
-}
+app.get('/health', (req, res) => res.json({ ok: true }))
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`🚀 Server → http://localhost:${PORT}`)
 })
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, async () => {
+    await closeBrowser()
+    process.exit(0)
+  })
+}
