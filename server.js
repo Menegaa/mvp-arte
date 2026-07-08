@@ -46,7 +46,10 @@ app.post('/webhooks/clickup', express.raw({ type: 'application/json' }), (req, r
 // ── Trigger manual (testes) ──────────────────────────────────
 app.post('/generate', express.json(), (req, res) => {
   const { task_id } = req.body ?? {}
-  if (!task_id) return res.status(400).json({ error: 'task_id é obrigatório' })
+  if (!task_id) {
+    console.warn('[generate] task_id ausente (pode ser um teste de ping do ClickUp)')
+    return res.json({ status: 'ignored', message: 'task_id é obrigatório para processamento' })
+  }
 
   res.json({ status: 'accepted' })
   processTask(task_id).catch(err => console.error('[generate]', err))
