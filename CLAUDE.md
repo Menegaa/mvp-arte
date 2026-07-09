@@ -11,6 +11,7 @@ npm run dev                  # node --watch server.js
 npm start                    # produção
 npm run build                # npx playwright install chromium
 node --env-file=.env <x.mjs> # scripts locais com os secrets do .env
+openssl rand -hex 24 
 ```
 
 Não há testes automatizados. Validação é visual: renderizar previews com fixtures e conferir o PNG.

@@ -62,7 +62,8 @@ export function extractVariacoes(task) {
   )
   if (!field || typeof field.value !== 'string') return []
 
-  let parts = field.value.split(/\r?\n/).map(p => p.trim()).filter(Boolean)
+  // separadores aceitos: quebra de linha, ";" e "|" (o time preenche de formas variadas)
+  let parts = field.value.split(/\r?\n|[;|]/).map(p => p.trim()).filter(Boolean)
   if (parts.length === 1 && parts[0].includes(',')) parts = parts[0].split(',')
   return parts
     .map(p => p.trim().replace(/[.,;]+$/, ''))
