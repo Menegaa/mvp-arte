@@ -2,7 +2,7 @@
 
 Serviço headless (Express + Playwright) que gera artes de vaga para Instagram a partir de cards do ClickUp:
 
-**Fluxo:** webhook `taskCreated` do ClickUp → extrai o id da vaga (primeiros dígitos do nome do card) e as variações de cargo (campo customizado "📣 Nomenclaturas", uma por linha) → busca dados da vaga no webhook n8n → condensa requisitos/benefícios via OpenAI → escolhe foto no Pexels por cargo → renderiza PNG 540×675 por variação → anexa os PNGs + comenta status no mesmo card.
+**Fluxo:** ClickUp dispara `taskCreated` → n8n (logs/re-execução) chama `POST /generate` com o `task_id` → extrai o id da vaga (primeiros dígitos do nome do card) e as variações de cargo (campo customizado "📣 Nomenclaturas", uma por linha) → busca dados da vaga no webhook n8n → condensa requisitos/benefícios via OpenAI → escolhe foto no Pexels por cargo → renderiza PNG 540×675 por variação → anexa os PNGs + comenta status no mesmo card.
 
 ## Comandos
 
@@ -17,7 +17,7 @@ Não há testes automatizados. Validação é visual: renderizar previews com fi
 
 ## Arquitetura
 
-- `server.js` — rotas: `POST /webhooks/clickup` (HMAC via `X-Signature`, responde 200 imediato, processa async), `POST /generate` (trigger manual `{task_id}`), `GET /health`.
+- `server.js` — rotas: `POST /webhooks/clickup` (HMAC via `X-Signature`, responde 200 imediato, processa async), `POST /generate` (entrada do n8n e trigger manual `{task_id}`; exige `Authorization: Bearer $GENERATE_TOKEN` quando o env está setado), `GET /health`.
 - `src/pipeline.js` — orquestração `processTask(taskId)`: getTask → n8n → condensar listas → fotos (Set de dedup por card) → renders em lotes de 3 → uploads sequenciais → comentário final ✅/⚠️/❌. Dedup de retries em memória (TTL 10 min).
 - `src/arte.js` — lógica pura: `extractVagaData` (aceita formato cru da API ou simplificado), `generatePostHTML` (substitui placeholders), busca de foto no Pexels (uma pessoa só, olhando pra câmera, relacionada ao cargo, centralizada), singleton do Chromium, screenshot.
 - `src/openai.js` — `condensarListas`: gpt-5-nano (`reasoning_effort: medium`) combina itens do mesmo tema e encurta sem perder informação (ex.: saúde + odontológico numa linha só). Sem `OPENAI_API_KEY` ou em erro, devolve as listas originais.
@@ -35,12 +35,12 @@ Não há testes automatizados. Validação é visual: renderizar previews com fi
 ## Integrações e contratos
 
 - **n8n**: `POST` `N8N_WEBHOOK_URL` com `{id_vaga, variacoes}`. Resposta: `company.name`, `locations[].city{name, state.acronym}`, `flightPlan.disclosure.mandatoryRequirements[]/segments[]`, `benefits[]`, `recruitingCompany.name` (decide o template).
-- **ClickUp**: webhook registrado por lista com evento `taskCreated`; o `secret` retornado vira `CLICKUP_WEBHOOK_SECRET`.
+- **ClickUp → n8n → cá**: o trigger `taskCreated` fica no n8n (visibilidade e re-execução pelo time); um nó HTTP Request chama `POST /generate` com `{task_id}` e `Authorization: Bearer $GENERATE_TOKEN`. A rota `POST /webhooks/clickup` (HMAC) continua disponível caso o ClickUp volte a chamar direto.
 - **Pexels**: busca landscape, ranqueia pelo `alt` (pessoa só > neutro > grupo) e prioriza originais verticais (pessoa centralizada no crop).
 
 ## Env (ver .env.example)
 
-`CLICKUP_API_TOKEN` e `CLICKUP_WEBHOOK_SECRET` obrigatórios; `OPENAI_API_KEY`, `PEXELS_KEY`, `N8N_WEBHOOK_URL`, `CLICKUP_FIELD_VARIACOES`, `PORT` opcionais (têm fallback). O `.env` local tem chaves reais — nunca expor nem commitar.
+`CLICKUP_API_TOKEN` obrigatório; `GENERATE_TOKEN` obrigatório em produção (sem ele o `/generate` fica aberto); `CLICKUP_WEBHOOK_SECRET` só se o ClickUp chamar direto; `OPENAI_API_KEY`, `PEXELS_KEY`, `N8N_WEBHOOK_URL`, `CLICKUP_FIELD_VARIACOES`, `PORT` opcionais (têm fallback). O `.env` local tem chaves reais — nunca expor nem commitar.
 
 ## Regras de trabalho
 

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import express from 'express'
 import { closeBrowser } from './src/arte.js'
 import { verifySignature } from './src/clickup.js'
@@ -43,8 +44,23 @@ app.post('/webhooks/clickup', express.raw({ type: 'application/json' }), (req, r
   processTask(taskId).catch(err => console.error('[webhook]', err))
 })
 
-// ── Trigger manual (testes) ──────────────────────────────────
+// ── Trigger via n8n / manual ─────────────────────────────────
+// protegido por token compartilhado: o n8n envia "Authorization: Bearer <GENERATE_TOKEN>"
+function generateTokenValido(header) {
+  const esperado = process.env.GENERATE_TOKEN
+  if (!esperado) return true
+  const recebido = Buffer.from(String(header ?? '').replace(/^Bearer\s+/i, ''))
+  const alvo = Buffer.from(esperado)
+  return recebido.length === alvo.length && crypto.timingSafeEqual(recebido, alvo)
+}
+
 app.post('/generate', express.json(), (req, res) => {
+  if (!process.env.GENERATE_TOKEN) {
+    console.warn('[generate] GENERATE_TOKEN não definido — endpoint aberto; configure antes de expor em produção')
+  } else if (!generateTokenValido(req.headers['authorization'])) {
+    return res.status(401).json({ error: 'token inválido' })
+  }
+
   const { task_id } = req.body ?? {}
   if (!task_id) {
     console.warn('[generate] task_id ausente (pode ser um teste de ping do ClickUp)')
